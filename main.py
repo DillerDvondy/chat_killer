@@ -116,6 +116,6 @@ async def me(user: discord.Member):
             time_so_far = int(time.time()) - local_time_log[str(user.guild.id)][user.author.name] + i["time_raw"]
     await user.send(f"Дурник {user.author.display_name} вже {time_format(time_so_far)} в онлайні, може зайти в чат уже на часі?")
 
-
+blobus_amogus = 1
 
 client.run(config.TOKEN, log_handler=handler, log_level=logging.DEBUG)

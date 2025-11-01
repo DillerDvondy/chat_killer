@@ -116,10 +116,6 @@ async def me(user: discord.Member):
             time_so_far = int(time.time()) - local_time_log[str(user.guild.id)][user.author.name] + i["time_raw"]
     await user.send(f"Дурник {user.author.display_name} вже {time_format(time_so_far)} в онлайні, може зайти в чат уже на часі?")
 
-@client.command()
-async def stats(user: discord.Member):
-    data = json_load(user.guild.id)
-    for i in data['dates'][-1]['records']:
-        await user.send(i)
+
 
 client.run(config.TOKEN, log_handler=handler, log_level=logging.DEBUG)

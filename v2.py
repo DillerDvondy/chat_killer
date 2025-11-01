@@ -106,8 +106,4 @@ async def upload(ctx):
             record = active_guilds[guild][user].gen_record()
             print(record)
 
-@client.event
-async def on_voice_state_update(member: discord.Member, before, after):
-    print(f"User {member} changed voice status")
-
 client.run(config.TOKEN, log_handler=handler, log_level=logging.DEBUG)

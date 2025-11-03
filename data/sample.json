@@ -1,5 +1,7 @@
 {
     "branch": "TimeLog",
+    "name": "",
+    "id": 0,
     "dates": [
         {
             "title" : "Test Date (do not remove)",

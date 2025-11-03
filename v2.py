@@ -3,6 +3,7 @@ from discord.ext import commands, tasks
 import logging
 
 import json
+import os.path
 
 from datetime import time as dt_time, datetime
 from zoneinfo import ZoneInfo
@@ -17,6 +18,20 @@ class JsonF:
 
     def __init__(self, guild):
         self.guild = guild
+
+        sample_data = ""
+        with open(f"{self.json_path}sample.json", 'r') as f:
+                sample_data = json.load(f)
+        sample_data["name"] = guild.name
+        sample_data["id"] = guild.id
+
+        try:
+            with open(f'{self.json_path}{guild.id}.json', 'x') as f:
+                json.dump(sample_data, f, ensure_ascii=False, indent=4)
+            # print("Guild json file created and sample data written")
+        except FileExistsError:
+            # print("Guild json file already exists, no data written")
+            return
 
     def json_load(self):
         with open(f"{self.json_path}{self.guild.id}.json", 'r') as f:
@@ -59,21 +74,18 @@ class Goy:
         if self.member.status in dis_status_online:
             self.currentDayOTime += time.time() - self.lastADayRegTime
             self.lastADayRegTime = time.time()
-        if self.member.voice and self.member.voice.channel:
-            self.currentDayVTime += time.time() - self.lastVRegTime
-
-    def reset(self):
-        currentDayOTime = 0
-        if self.member.status in dis_status_online:
-            self.lastADayRegTime = time.time()
         else:
             self.lastADayRegTime = 0
 
-        currentDayVTime = 0
         if self.member.voice and self.member.voice.channel:
+            self.currentDayVTime += time.time() - self.lastVRegTime
             self.lastVRegTime = time.time()
         else:
             self.lastVRegTime = 0
+
+    def reset(self):
+        self.currentDayOTime = 0
+        self.currentDayVTime = 0
 
 
 active_guilds = {}
@@ -132,15 +144,6 @@ async def on_presence_update(before, after):
         goy.lastADayRegTime = 0
 
 
-@client.command()
-async def upload(ctx):
-    for guild in active_guilds:
-        for user in active_guilds[guild]:
-            if user == 'guild':
-                continue
-            record = active_guilds[guild][user].gen_record()
-            print(record)
-
 @client.event
 async def on_voice_state_update(member: discord.Member, before, after):
     if member.bot:
@@ -158,22 +161,16 @@ async def on_voice_state_update(member: discord.Member, before, after):
         goy.currentDayVTime += time.time() - goy.lastVRegTime
         goy.lastVRegTime = 0
 
-@client.command()
-async def stats(ctx):
-    goy = active_guilds[ctx.author.guild.id][ctx.author.id]
-    print(goy.gen_record())
 
-@tasks.loop(time=dt_time(hour=23, minute=0, tzinfo=ZoneInfo("Europe/Berlin")))
+#@tasks.loop(time=dt_time(hour=22, minute=20, tzinfo=ZoneInfo("Europe/Berlin")))
+@tasks.loop(hours=8)
 async def save_stats():
     print('Saving goy stats in json...')
 
     today_date = str(datetime.now()).split(" ")[0]
-    guild_json = []
 
     for guildID in active_guilds:
         guild_json_obj = JsonF(active_guilds[guildID]['guild'])
-        guild_json.append(guild_json_obj)
-
         data = guild_json_obj.json_load()
 
         if data['dates'][-1]['date'] != today_date:
@@ -195,5 +192,31 @@ async def save_stats():
         guild_json_obj.json_update(data)
 
     print("Finished loading json files.")
+
+# Govnokod
+@client.command()
+async def stats(ctx):
+    data = JsonF(ctx.guild).json_load()
+    return_data = ""
+    for goyID in active_guilds[ctx.guild.id]:
+        if goyID == 'guild':
+            continue
+        goy = active_guilds[ctx.guild.id][goyID]
+        goy.force_save()
+        temp_record = goy.gen_record()
+        today_date = str(datetime.now()).split(" ")[0]
+        if data['dates'][-1]['date'] != today_date:
+                data['dates'].append({'date' : today_date, 'records' : []})
+        data['dates'][-1]['records'].append(temp_record)
+        online_time = 0
+        voice_time = 0
+        for entry in data['dates'][-1]['records']:
+            if entry['id'] == goy.member.id:
+                online_time += entry['time_raw online']
+                voice_time += entry['time_raw voice']
+        return_data += (f'{goy.member.display_name}\nOnline: {config.time_convert(online_time)}\nVoice: {config.time_convert(voice_time)}\n')
+    await ctx.send(return_data)
+
+
 
 client.run(config.TOKEN, log_handler=handler, log_level=logging.DEBUG)

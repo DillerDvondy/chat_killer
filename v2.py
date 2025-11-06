@@ -66,9 +66,9 @@ class Goy:
             "id" : self.member.id,
             "name" : self.member.nick,
             "time_raw online" : self.currentDayOTime,
-            "time online" : time_conver(self.currentDayOTime),
+            "time online" : time_convert(self.currentDayOTime),
             "time_raw voice" : self.currentDayVTime,
-            "time voice" : time_conver(self.currentDayVTime)
+            "time voice" : time_convert(self.currentDayVTime)
         }
 
     def force_save(self):
@@ -224,7 +224,7 @@ async def stats(ctx):
             if entry['id'] == goy.member.id:
                 online_time += entry['time_raw online']
                 voice_time += entry['time_raw voice']
-        return_data += (f'{goy.member.display_name}\nOnline: {time_conver(online_time)}\nVoice: {time_conver(voice_time)}\n')
+        return_data += (f'{goy.member.display_name}\nOnline: {time_convert(online_time)}\nVoice: {time_convert(voice_time)}\n')
     await ctx.send(return_data)
 
 

@@ -21,13 +21,13 @@ class JsonF:
         self.guild = guild
 
         sample_data = ""
-        with open(f"{self.json_path}sample.json", 'r') as f:
+        with open(f"{self.json_path}sample.json", 'r', encoding="utf-8") as f:
                 sample_data = json.load(f)
         sample_data["name"] = guild.name
         sample_data["id"] = guild.id
 
         try:
-            with open(f'{self.json_path}{guild.id}.json', 'x') as f:
+            with open(f'{self.json_path}{guild.id}.json', 'x', encoding="utf-8") as f:
                 json.dump(sample_data, f, ensure_ascii=False, indent=4)
             # print("Guild json file created and sample data written")
         except FileExistsError:
@@ -35,11 +35,11 @@ class JsonF:
             return
 
     def json_load(self):
-        with open(f"{self.json_path}{self.guild.id}.json", 'r') as f:
+        with open(f"{self.json_path}{self.guild.id}.json", 'r', encoding="utf-8") as f:
             return json.load(f)
 
     def json_update(self, data):
-        with open(f"{self.json_path}{self.guild.id}.json", 'w') as f:
+        with open(f"{self.json_path}{self.guild.id}.json", 'w', encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
 
 class Goy:

@@ -11,7 +11,8 @@ import time
 
 import pprint
 
-import config
+import os
+from dotenv import load_dotenv
 
 class JsonF:
     json_path = "data/"
@@ -65,9 +66,9 @@ class Goy:
             "id" : self.member.id,
             "name" : self.member.nick,
             "time_raw online" : self.currentDayOTime,
-            "time online" : config.time_convert(self.currentDayOTime),
+            "time online" : time_conver(self.currentDayOTime),
             "time_raw voice" : self.currentDayVTime,
-            "time voice" : config.time_convert(self.currentDayVTime)
+            "time voice" : time_conver(self.currentDayVTime)
         }
 
     def force_save(self):
@@ -87,6 +88,15 @@ class Goy:
         self.currentDayOTime = 0
         self.currentDayVTime = 0
 
+def time_convert(seconds):
+    s = int(seconds)
+    h = s // 3600
+    m = (s % 3600) // 60
+    s = s % 60
+    return f"{h}г {m}хв {s}с"
+
+load_dotenv()
+TOKEN = os.getenv("TOKEN")
 
 active_guilds = {}
 dis_status_online = [discord.Status.online, discord.Status.idle, discord.Status.dnd]
@@ -214,9 +224,9 @@ async def stats(ctx):
             if entry['id'] == goy.member.id:
                 online_time += entry['time_raw online']
                 voice_time += entry['time_raw voice']
-        return_data += (f'{goy.member.display_name}\nOnline: {config.time_convert(online_time)}\nVoice: {config.time_convert(voice_time)}\n')
+        return_data += (f'{goy.member.display_name}\nOnline: {time_conver(online_time)}\nVoice: {time_conver(voice_time)}\n')
     await ctx.send(return_data)
 
 
 
-client.run(config.TOKEN, log_handler=handler, log_level=logging.DEBUG)
+client.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)

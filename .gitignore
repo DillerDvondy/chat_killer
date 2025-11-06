@@ -6,3 +6,4 @@ lib/
 lib64/
 logs/
 __pycache__/
+.env

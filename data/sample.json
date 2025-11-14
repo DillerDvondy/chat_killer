@@ -1,12 +1,14 @@
 {
     "branch": "TimeLog",
-    "name": "",
+    "name": "Do NOT Delete",
     "id": 0,
-    "dates": [
-        {
-            "title" : "Test Date (do not remove)",
-            "date": "2005-01-03",
-            "records": []
-        }
-    ]
+    "dates": 
+    {
+            "2005-01-03" : {
+                "records": 
+                {
+
+                }
+            }
+    }
 }

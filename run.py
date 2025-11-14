@@ -37,17 +37,18 @@ async def on_ready():
     for guild in client.guilds:
         active_guilds[guild.id] = {}
         active_guilds[guild.id]['guild'] = guild
+        active_guilds[guild.id]['bot_channel'] = client.get_channel(int(input(f'Input bot channel for guild {guild.name}:  ')))
         for member in guild.members:
             if not member.bot:
-                active_guilds[guild.id][str(member.id)] = Goy(member)
+                active_guilds[guild.id][member.id] = Goy(member)
 
     print(f'Currently running on guilds \n{pprint.pformat(active_guilds)}')
 
     # Innitial user time check
     for guildID in active_guilds:
         for goyID in active_guilds[guildID]:
-            if goyID != 'guild':
-                goyID = str(goyID)
+            if goyID != 'guild' and goyID != 'bot_channel':
+                goyID = goyID
                 if active_guilds[guildID][goyID].member.status in Goy.dis_status_online:
                     active_guilds[guildID][goyID].lastADayRegTime = time()
 
@@ -66,7 +67,7 @@ async def on_presence_update(before, after):
         return
     print(f'User {before.name} changed their status: from {before.status} to {after.status}')
 
-    goy = active_guilds[before.guild.id][str(before.id)]
+    goy = active_guilds[before.guild.id][before.id]
 
     if after.status in Goy.dis_status_online and before.status not in Goy.dis_status_online:
         goy.lastADayRegTime = time()
@@ -97,7 +98,7 @@ utc_times = [
     datetime.time(hour=23, minute=0),  # 00:00 CET
     datetime.time(hour=7, minute=0),   # 08:00 CET
     datetime.time(hour=15, minute=0),   # 16:00 CET
-    datetime.time(hour=16, minute=42, second=0) # Testing
+    datetime.time(hour=0, minute=8, second=0) # Testing
 ]
 
 @tasks.loop(time=utc_times)
@@ -110,11 +111,11 @@ async def save_stats():
         guild_json_obj = JsonF(active_guilds[guildID]['guild'])
         data = guild_json_obj.json_load()
 
-        if data['dates'][-1]['date'] != today_date:
-                data['dates'].append({'date' : today_date, 'records' : {}})
+        if today_date not in data['dates']:
+            data['dates'][today_date] = {'records' : {}}
 
         for goyID in active_guilds[guildID]:
-            if goyID == 'guild':
+            if goyID == 'guild' or goyID == 'bot_channel':
                 continue
 
             goy_obj = active_guilds[guildID][goyID]
@@ -122,14 +123,14 @@ async def save_stats():
             goy_obj.force_save()
             record = goy_obj.gen_record()
 
-            if goyID in data['dates'][-1]['records']:
-                record['time_raw online'] += data['dates'][-1]['records'][goyID]['time_raw online']
-                record['time_raw voice'] += data['dates'][-1]['records'][goyID]['time_raw voice']
+            if goyID in data['dates'][today_date]['records']:
+                record['time_raw online'] += data['dates'][today_date]['records'][goyID]['time_raw online']
+                record['time_raw voice'] += data['dates'][today_date]['records'][goyID]['time_raw voice']
                 record['time online'] = time_convert(record['time_raw online'])
                 record['time voice'] = time_convert(record['time_raw voice'])
-                data['dates'][-1]['records'].pop(goyID)
+                data['dates'][today_date]['records'].pop(goyID)
 
-            data['dates'][-1]['records'][goyID] = record
+            data['dates'][today_date]['records'][goyID] = record
             
             goy_obj.reset()
             print(f'Goy {goy_obj.member.display_name} was added to temp data')
@@ -138,19 +139,29 @@ async def save_stats():
 
     print("Finished loading json files.")
 
-# @tasks.loop(time=datetime.time(hour=23, minute=1))
+
+#@tasks.loop(time=utc_times[-1])
 @client.command()
 async def day_stats(ctx):
+    today_date = str(datetime.datetime.now()).split(" ")[0]
+    
+    print("Day stats:")
+
     for guildID in active_guilds:
         data = JsonF(active_guilds[guildID]['guild']).json_load()
+
+        if today_date not in data['dates']:
+            data['dates'][today_date] = {'records' : {}}
+        
         killer = None
         killer_time = 0
+
         for goyID in active_guilds[guildID]:
-            if goyID == 'guild':
+            if goyID == 'guild' or goyID == 'bot_channel':
                 continue
             
-            goyID_o = data['dates'][-1]['records'][str(goyID)]['time_raw online']
-            goyID_v = data['dates'][-1]['records'][str(goyID)]['time_raw voice']
+            goyID_o = data['dates'][today_date]['records'][str(goyID)]['time_raw online']
+            goyID_v = data['dates'][today_date]['records'][str(goyID)]['time_raw voice']
 
             if killer == None:
                 killer = active_guilds[guildID][goyID]
@@ -160,13 +171,15 @@ async def day_stats(ctx):
             if goyID_o - goyID_v > killer_time:
                 killer = active_guilds[guildID][goyID].member
                 killer_time = goyID_o - goyID_v
-    
-    temp = day_stats_gen()
-    template = temp[1]
 
-    killer_online = data['dates'][-1]['records'][str(goyID)]['time online']
-    killer_voice = data['dates'][-1]['records'][str(goyID)]['time voice']
-    message = temp[0].format(random.choice(template['NICKNAMES'][killer.name]), killer.display_name, killer_online, killer_voice)
-    await ctx.send(message)
+        temp = day_stats_gen()
+        template = temp[1]
+
+        killer_online = data['dates'][today_date]['records'][str(goyID)]['time online']
+        killer_voice = data['dates'][today_date]['records'][str(goyID)]['time voice']
+        message = temp[0].format(random.choice(template['NICKNAMES'][killer.member.name]), killer.member.display_name, killer_online, killer_voice)
+
+        await active_guilds[guildID]['bot_channel'].send(message)
+    #await ctx.send(message)
 
 client.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)

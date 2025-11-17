@@ -99,7 +99,6 @@ utc_times = [
     datetime.time(hour=23, minute=0),  # 00:00 CET
     datetime.time(hour=7, minute=0),   # 08:00 CET
     datetime.time(hour=15, minute=0),   # 16:00 CET
-    datetime.time(hour=19, minute=12)
 ]
 
 @tasks.loop(time=utc_times)
@@ -141,7 +140,7 @@ async def save_stats():
     print("Finished loading json files.")
 
 
-@tasks.loop(time=datetime.time(hour=19, minute=13))
+@tasks.loop(time=datetime.time(hour=23, minute=2))
 async def day_stats():
     today_date = str(datetime.datetime.now()).split(" ")[0]
     

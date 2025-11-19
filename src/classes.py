@@ -36,7 +36,8 @@ class Goy:
     def __init__(self, member: discord.Member):
         self.member = member
 
-    dis_status_online = [discord.Status.online, discord.Status.idle, discord.Status.dnd]
+    # dis_status_online = [discord.Status.online, discord.Status.idle, discord.Status.dnd]
+    dis_status_online = [discord.Status.online]
 
     currentDayOTime = 0
     lastADayRegTime = 0

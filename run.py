@@ -62,9 +62,7 @@ async def on_ready():
 
 @client.event
 async def on_presence_update(before, after):
-    if before.bot:
-        return
-    if before.status == after.status:
+    if before.bot or before.status == after.status:
         return
     print(f'User {before.name} changed their status: from {before.status} to {after.status}')
 
@@ -96,9 +94,9 @@ async def on_voice_state_update(member: discord.Member, before, after):
 
 
 utc_times = [
-    datetime.time(hour=22, minute=0),  # 00:00 CET
-    datetime.time(hour=7, minute=0),   # 08:00 CET
-    datetime.time(hour=15, minute=0),   # 16:00 CET
+    datetime.time(hour=22, minute=0),  # 23:00 CET
+    datetime.time(hour=6, minute=0),   # 07:00 CET
+    datetime.time(hour=14, minute=0),   # 15:00 CET
 ]
 
 @tasks.loop(time=utc_times)
@@ -174,8 +172,8 @@ async def day_stats():
         temp = day_stats_gen()
         template = temp[1]
 
-        killer_online = data['dates'][today_date]['records'][str(goyID)]['time online']
-        killer_voice = data['dates'][today_date]['records'][str(goyID)]['time voice']
+        killer_online = data['dates'][today_date]['records'][str(killer.member.id)]['time online']
+        killer_voice = data['dates'][today_date]['records'][str(killer.member.id)]['time voice']
         message = temp[0].format(random.choice(template['NICKNAMES'][killer.member.name]), killer.member.display_name, killer_online, killer_voice)
 
         await active_guilds[guildID]['bot_channel'].send(message)

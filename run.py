@@ -141,42 +141,80 @@ async def save_stats():
 @tasks.loop(time=datetime.time(hour=22, minute=2))
 async def day_stats():
     today_date = str(datetime.datetime.now()).split(" ")[0]
-    
+
     print("Day stats:")
 
     for guildID in active_guilds:
-        data = JsonF(active_guilds[guildID]['guild']).json_load()
+        # Завантаження даних
+        guild_obj = active_guilds[guildID]['guild']
+        json_f = JsonF(guild_obj)
+        data = json_f.json_load()
 
         if today_date not in data['dates']:
-            data['dates'][today_date] = {'records' : {}}
-        
+            data['dates'][today_date] = {'records': {}}
+
+        records = data['dates'][today_date]['records']
+
+        # ЕТАП 1: Знаходимо максимальний час у голосовому каналі (max_voice)
+        max_voice = 0
+        for goyID in active_guilds[guildID]:
+            if goyID == 'guild' or goyID == 'bot_channel':
+                continue
+
+            str_goyID = str(goyID)
+            if str_goyID in records:
+                voice_time = records[str_goyID].get('time_raw voice', 0)
+                if voice_time > max_voice:
+                    max_voice = voice_time
+
+        # ЕТАП 2: Визначаємо Killer, виключаючи лідера по войсу
         killer = None
-        killer_time = 0
+        killer_time = -float('inf')  # Використовуємо -inf для коректного порівняння з від'ємними числами
 
         for goyID in active_guilds[guildID]:
             if goyID == 'guild' or goyID == 'bot_channel':
                 continue
-            
-            goyID_o = data['dates'][today_date]['records'][str(goyID)]['time_raw online']
-            goyID_v = data['dates'][today_date]['records'][str(goyID)]['time_raw voice']
 
-            if killer == None:
-                killer = active_guilds[guildID][goyID]
-                killer_time = goyID_o - goyID_v
+            str_goyID = str(goyID)
+            if str_goyID not in records:
                 continue
 
-            if goyID_o - goyID_v > killer_time:
+            goyID_o = records[str_goyID].get('time_raw online', 0)
+            goyID_v = records[str_goyID].get('time_raw voice', 0)
+
+            # УМОВА КОРИСТУВАЧА: Виключаємо користувача, якщо у нього найбільший час у войсі
+            # (за умови, що хтось взагалі був у войсі, тобто max_voice > 0)
+            if max_voice > 0 and goyID_v == max_voice:
+                continue
+
+            current_score = goyID_o - goyID_v
+
+            if killer is None or current_score > killer_time:
                 killer = active_guilds[guildID][goyID]
-                killer_time = goyID_o - goyID_v
+                killer_time = current_score
 
-        temp = day_stats_gen()
-        template = temp[1]
+        # Відправка повідомлення
+        if killer:
+            temp = day_stats_gen()
+            template = temp[1]
 
-        killer_online = data['dates'][today_date]['records'][str(killer.member.id)]['time online']
-        killer_voice = data['dates'][today_date]['records'][str(killer.member.id)]['time voice']
-        message = temp[0].format(random.choice(template['NICKNAMES'][killer.member.name]), killer.member.display_name, killer_online, killer_voice)
+            killer_id_str = str(killer.member.id)
+            killer_online = records[killer_id_str]['time online']
+            killer_voice = records[killer_id_str]['time voice']
 
-        await active_guilds[guildID]['bot_channel'].send(message)
+            # Безпечний вибір нікнейму (fallback на display_name, якщо список порожній або ключа немає)
+            killer_name = killer.member.name
+            if killer_name in template['NICKNAMES'] and template['NICKNAMES'][killer_name]:
+                nickname = random.choice(template['NICKNAMES'][killer_name])
+            else:
+                nickname = killer.member.display_name
+
+            message = temp[0].format(nickname, killer.member.display_name, killer_online, killer_voice)
+
+            await active_guilds[guildID]['bot_channel'].send(message)
+        else:
+            print(
+                f"Не вдалося визначити Killer для гільдії {guild_obj.name} (ID: {guildID}). Можливо, недостатньо даних.")
     #await ctx.send(message)
 
 client.run(TOKEN, log_handler=handler, log_level=logging.DEBUG)
